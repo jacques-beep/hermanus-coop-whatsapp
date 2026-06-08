@@ -1,41 +1,43 @@
+---CODE START---
+
 from flask import Flask, request
 from telegram import Bot
-import logging
+import traceback
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
 TELEGRAM_TOKEN = "8868800018:AAGM2HwjfYyDQkMUkUJpag1JrecAXp8ClQw"
-bot = Bot(token=TELEGRAM_TOKEN)
 
 @app.route('/telegram', methods=['POST'])
 def telegram_webhook():
     try:
-        update = request.get_json()
-        print(f"Received: {update}")
-        
-        if 'message' not in update:
+        data = request.get_json()
+        if not data or 'message' not in data:
             return "OK", 200
         
-        message = update['message']
-        chat_id = message['chat']['id']
-        text = message.get('text', '')
+        msg = data['message']
+        chat_id = msg.get('chat', {}).get('id')
+        text = msg.get('text', '')
         
-        print(f"Chat ID: {chat_id}, Text: {text}")
+        if not chat_id:
+            return "OK", 200
+        
+        bot = Bot(token=TELEGRAM_TOKEN)
         
         if text == '/start':
-            bot.send_message(chat_id=chat_id, text="✅ Bot is working! Hello from Hermanus Coop!")
+            bot.send_message(chat_id=chat_id, text="✅ Bot working! Hello from Hermanus Coop!")
         else:
-            bot.send_message(chat_id=chat_id, text=f"You sent: {text}")
+            bot.send_message(chat_id=chat_id, text=f"Echo: {text}")
         
-        return "OK", 200
     except Exception as e:
-        print(f"Error: {e}")
-        return "OK", 200
+        print(f"ERROR: {traceback.format_exc()}")
+    
+    return "OK", 200
 
 @app.route('/health', methods=['GET'])
 def health():
     return {'status': 'ok'}, 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=8000)
+
+---CODE END---
