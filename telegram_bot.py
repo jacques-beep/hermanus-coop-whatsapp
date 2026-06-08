@@ -1,115 +1,104 @@
 from flask import Flask, request
-import requests as req
+import requests as http
+import os
 
 app = Flask(__name__)
 
 TOKEN = "8868800018:AAGM2HwjfYyDQkMUkUJpag1JrecAXp8ClQw"
 API = f"https://api.telegram.org/bot{TOKEN}"
 
-COOP_SHAPID = "+27716340281"
-COOP_MOMO = "47146617"
-MEAL_COST = 35
-
 def send(chat_id, text):
-    req.post(f"{API}/sendMessage", json={
-        "chat_id": chat_id,
-        "text": text
-    })
-
-def main_menu():
-    return (
-        "🏠 HERMANUS COOP WALLET\n\n"
-        "Choose what you'd like:\n\n"
-        "1️⃣ Fund wallet 💳\n"
-        "2️⃣ Buy airtime 📱\n"
-        "3️⃣ Order meals 🍽️\n"
-        "4️⃣ Check balance 💰\n"
-        "5️⃣ Get help ❓"
-    )
+    try:
+        http.post(f"{API}/sendMessage", json={
+            "chat_id": chat_id,
+            "text": text
+        }, timeout=10)
+    except Exception as e:
+        print(f"Send error: {e}")
 
 @app.route('/telegram', methods=['POST'])
 def webhook():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
+        print(f"Got data: {data}")
 
-        if not data or 'message' not in data:
+        if not data:
+            return "OK", 200
+
+        if 'message' not in data:
             return "OK", 200
 
         msg = data['message']
         chat_id = msg.get('chat', {}).get('id')
         text = msg.get('text', '').strip()
 
+        print(f"Chat: {chat_id} Text: {text}")
+
         if not chat_id:
             return "OK", 200
 
         if text == '/start' or text == '0' or text.lower() == 'menu':
-            send(chat_id, 
+            send(chat_id,
                 "👋 Welcome to Hermanus Coop!\n\n"
-                + main_menu()
+                "Choose:\n\n"
+                "1 Fund wallet\n"
+                "2 Buy airtime\n"
+                "3 Order meals\n"
+                "4 Check balance\n"
+                "5 Get help"
             )
 
         elif text == '1':
             send(chat_id,
-                "💳 FUND YOUR WALLET\n\n"
-                "Option 1 - PayShap:\n"
-                f"Send to: {COOP_SHAPID}\n\n"
-                "Option 2 - MoMo USSD:\n"
-                f"Dial: *170*{COOP_MOMO}*AMOUNT#\n\n"
-                "Option 3 - Cash:\n"
-                "Bring cash to coop office\n\n"
-                "Reply MENU to go back"
+                "💳 FUND WALLET\n\n"
+                "PayShap: +27716340281\n"
+                "MoMo: *170*47146617*AMOUNT#\n"
+                "Cash: At office\n\n"
+                "Reply 0 for menu"
             )
 
         elif text == '2':
             send(chat_id,
                 "📱 BUY AIRTIME\n\n"
-                "Choose amount:\n\n"
-                "Type: 50 for R50\n"
-                "Type: 100 for R100\n"
-                "Type: 200 for R200\n"
-                "Type: 500 for R500\n\n"
-                "Reply MENU to go back"
+                "Type amount:\n"
+                "50, 100, 200 or 500\n\n"
+                "Reply 0 for menu"
             )
 
         elif text == '3':
             send(chat_id,
-                f"🍽️ ORDER MEALS\n\n"
-                f"Every Friday 12-2pm\n"
-                f"R{MEAL_COST} per meal\n\n"
-                f"1️⃣ 1 meal - R{MEAL_COST}\n"
-                f"2️⃣ 2 meals - R{MEAL_COST*2}\n"
-                f"3️⃣ 3 meals - R{MEAL_COST*3}\n"
-                f"4️⃣ 4 meals - R{MEAL_COST*4}\n\n"
-                "Reply with number of meals\n"
-                "Reply MENU to go back"
+                "🍽️ ORDER MEALS\n\n"
+                "Friday 12-2pm\n"
+                "R35 per meal\n\n"
+                "How many meals?\n"
+                "Type: 1, 2, 3 or 4\n\n"
+                "Reply 0 for menu"
             )
 
         elif text == '4':
             send(chat_id,
                 "💰 YOUR BALANCE\n\n"
                 "Balance: R0\n\n"
-                "(Google Sheets integration\n"
-                "coming in next version)\n\n"
-                "Reply MENU to go back"
+                "Reply 0 for menu"
             )
 
         elif text == '5':
             send(chat_id,
                 "❓ HELP\n\n"
-                "💳 Fund wallet:\n"
-                f"PayShap: {COOP_SHAPID}\n"
-                f"MoMo: *170*{COOP_MOMO}*AMOUNT#\n\n"
-                "📱 Airtime:\n"
-                "Type amount (50, 100, 200, 500)\n\n"
-                "🍽️ Meals:\n"
-                f"R{MEAL_COST} each, Fridays 12-2pm\n\n"
-                "Reply MENU anytime to go back"
+                "PayShap: +27716340281\n"
+                "MoMo: *170*47146617*AMOUNT#\n"
+                "Meals: R35 each Friday\n\n"
+                "Reply 0 for menu"
             )
 
         else:
             send(chat_id,
-                f"Got it! ✅\n\n"
-                + main_menu()
+                "Choose:\n\n"
+                "1 Fund wallet\n"
+                "2 Buy airtime\n"
+                "3 Order meals\n"
+                "4 Check balance\n"
+                "5 Get help"
             )
 
     except Exception as e:
@@ -124,4 +113,5 @@ def health():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    port = int(os.environ.get('PORT', 8000))
+    app.run(host='0.0.0.0', port=port)
